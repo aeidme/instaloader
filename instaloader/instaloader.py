@@ -820,10 +820,12 @@ class Instaloader:
                                                                lambda d: d['data']['user']['edge_web_discover_media'],
                                                                data.get('rhx_gis')))
 
-    def get_hashtag_posts(self, hashtag: str) -> Iterator[Post]:
+    def get_hashtag_posts(self, hashtag: str, limit: Optional[int] = None) -> Iterator[Post]:
         """Get Posts associated with a #hashtag."""
         has_next_page = True
         end_cursor = None
+        if limit is not None:
+            posts_count = 0
         while has_next_page:
             if end_cursor:
                 params = {'__a': 1, 'max_id': end_cursor}
@@ -831,7 +833,12 @@ class Instaloader:
                 params = {'__a': 1}
             hashtag_data = self.context.get_json('explore/tags/{0}/'.format(hashtag),
                                                  params)['graphql']['hashtag']['edge_hashtag_to_media']
+            if limit is not None:    
+                posts_count += len(hashtag_data['edges'])
             yield from (Post(self.context, edge['node']) for edge in hashtag_data['edges'])
+            if limit is not None:
+                if posts_count >= limit:
+                    break
             has_next_page = hashtag_data['page_info']['has_next_page']
             end_cursor = hashtag_data['page_info']['end_cursor']
 
